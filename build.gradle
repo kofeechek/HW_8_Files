@@ -1,0 +1,31 @@
+import javax.tools.JavaCompiler
+
+plugins {
+    id 'java-library'
+}
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    testImplementation(
+            "com.codeborne:selenide:7.14.0",
+            platform("org.junit:junit-bom:5.10.0"))
+    testImplementation("org.junit.jupiter:junit-jupiter")
+    testImplementation 'commons-io:commons-io:2.15.0'
+    testImplementation 'com.codeborne:pdf-test:1.5.0'
+    testImplementation 'com.codeborne:xls-test:1.4.3'
+    testImplementation 'com.opencsv:opencsv:5.9'
+    testImplementation 'com.google.code.gson:gson:2.10.1'
+    testImplementation 'org.apache.poi:poi-ooxml:5.2.5'
+    testImplementation 'com.fasterxml.jackson.core:jackson-databind:2.21.3'
+}
+
+tasks.withType(JavaCompile){
+    options.encoding = 'UTF-8'
+}
+
+test {
+    useJUnitPlatform()
+}

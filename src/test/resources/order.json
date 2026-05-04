@@ -1,0 +1,14 @@
+{
+  "title": "order",
+  "ID": 123456,
+  "category": "cars",
+  "items": {
+    "model": "Tesla X",
+    "color": "blue",
+    "equipment": [
+      "engine",
+      "braking system",
+      "wheels"
+    ]
+  }
+}
