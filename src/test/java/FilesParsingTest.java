@@ -7,9 +7,6 @@ import org.apache.poi.ss.usermodel.*;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
-import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -25,86 +22,110 @@ public class FilesParsingTest {
     private ClassLoader cl = FilesParsingTest.class.getClassLoader();
 
     @Test
-    void zipFileParsingTest() throws Exception {
+    void csvFileParsingTest() throws Exception {
         try (ZipInputStream zis = new ZipInputStream(
                 cl.getResourceAsStream("testzip.zip")
         )) {
-            ZipEntry entry;
+            ZipEntry entry = zis.getNextEntry();
 
-            while ((entry = zis.getNextEntry()) != null) {
+            assertNotNull(entry);
+
+            do {
 
                 String[] fileData = entry.getName().split("\\.");
                 String fileType = fileData[fileData.length - 1];
 
 
-                ByteArrayOutputStream baos = new ByteArrayOutputStream();
-                zis.transferTo(baos);
-                byte[] fileBytes = baos.toByteArray();
-                ByteArrayInputStream bais = new ByteArrayInputStream(fileBytes);
-
-                switch (fileType) {
-                    case "csv":
-                        csvFileParsing(bais);
-                        break;
-                    case "xls":
-                        xlsxFileParsing(bais);
-                        break;
-                    case "pdf":
-                        pdfFileParsing(bais);
-                        break;
+                if (fileType != "csv") {
+                    continue;
                 }
-            }
+                try (CSVReader csvReader = new CSVReader(new InputStreamReader(zis))) {
 
-        }
-    }
-
-
-    private void csvFileParsing(InputStream inputStream) throws Exception {
-        try (CSVReader csvReader = new CSVReader(new InputStreamReader(inputStream))) {
-
-            List<String[]> data = csvReader.readAll();
-            assertEquals(3, data.size());
-            Assertions.assertArrayEquals(
-                    new String[]{"January", "first month of the year"},
-                    data.get(0)
-            );
-            Assertions.assertArrayEquals(
-                    new String[]{"February", "second month of the year"},
-                    data.get(1)
-            );
-            Assertions.assertArrayEquals(
-                    new String[]{"March", "third month of the year"},
-                    data.get(2)
-            );
-        }
-    }
-
-    private void pdfFileParsing(InputStream inputStream) throws Exception {
-        try (PDDocument document = PDDocument.load(inputStream)) {
-
-            PDFTextStripper pdfStripper = new PDFTextStripper();
-            String text = pdfStripper.getText(document);
-
-            assertTrue(text.contains("Извещение о дорожно-транспортном происшествии"));
+                    List<String[]> data = csvReader.readAll();
+                    assertEquals(3, data.size());
+                    Assertions.assertArrayEquals(
+                            new String[]{"January", "first month of the year"},
+                            data.get(0)
+                    );
+                    Assertions.assertArrayEquals(
+                            new String[]{"February", "second month of the year"},
+                            data.get(1)
+                    );
+                    Assertions.assertArrayEquals(
+                            new String[]{"March", "third month of the year"},
+                            data.get(2)
+                    );
+                }
+            } while ((entry = zis.getNextEntry()) != null);
 
 
         }
     }
 
-    private void xlsxFileParsing(InputStream inputStream) throws Exception {
-        try (Workbook workbook = WorkbookFactory.create(inputStream)) {
-
-            Sheet sheet = workbook.getSheet("Payments");
-            Row row = sheet.getRow(1);
-            Cell cell = row.getCell(3);
-
-            String value = cell.getStringCellValue();
-
-            assertEquals("42301810158742897803", value);
-        }
-    }
 
     @Test
+    void pdfFileParsingTest() throws Exception {
+        try (ZipInputStream zis = new ZipInputStream(
+                cl.getResourceAsStream("testzip.zip")
+        )) {
+            ZipEntry entry = zis.getNextEntry();
+
+            assertNotNull(entry);
+
+            do {
+
+                String[] fileData = entry.getName().split("\\.");
+                String fileType = fileData[fileData.length - 1];
+
+
+                if (fileType != "pdf") {
+                    continue;
+                }
+                try (PDDocument document = PDDocument.load(zis)) {
+
+                    PDFTextStripper pdfStripper = new PDFTextStripper();
+                    String text = pdfStripper.getText(document);
+
+                    assertTrue(text.contains("Извещение о дорожно-транспортном происшествии"));
+                }
+            } while ((entry = zis.getNextEntry()) != null);
+        }
+    }
+
+
+    @Test
+    void xlsxFileParsingTest() throws Exception {
+        try (ZipInputStream zis = new ZipInputStream(
+                cl.getResourceAsStream("testzip.zip")
+        )) {
+            ZipEntry entry = zis.getNextEntry();
+
+            assertNotNull(entry);
+
+            do {
+
+                String[] fileData = entry.getName().split("\\.");
+                String fileType = fileData[fileData.length - 1];
+
+
+                if (fileType != "xlsx") {
+                    continue;
+                }
+                try (Workbook workbook = WorkbookFactory.create(zis)) {
+
+                    Sheet sheet = workbook.getSheet("Payments");
+                    Row row = sheet.getRow(1);
+                    Cell cell = row.getCell(3);
+
+                    String value = cell.getStringCellValue();
+
+                    assertEquals("42301810158742897803", value);
+                }
+            } while ((entry = zis.getNextEntry()) != null);
+        }
+    }
+
+
     void jsonFileParsingTest() throws Exception {
         Path path = Path.of(getClass().getClassLoader().getResource("order.json").toURI());
         String json = Files.readString(path);
