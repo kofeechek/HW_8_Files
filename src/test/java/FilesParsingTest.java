@@ -7,6 +7,8 @@ import org.apache.poi.ss.usermodel.*;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.InputStreamReader;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -14,12 +16,14 @@ import java.util.List;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
+import static org.apache.poi.ss.usermodel.WorkbookFactory.create;
 import static org.junit.jupiter.api.Assertions.*;
 
 
 public class FilesParsingTest {
 
     private ClassLoader cl = FilesParsingTest.class.getClassLoader();
+
 
     @Test
     void csvFileParsingTest() throws Exception {
@@ -29,17 +33,22 @@ public class FilesParsingTest {
             ZipEntry entry = zis.getNextEntry();
 
             assertNotNull(entry);
-
+            boolean hasRequiredFile = false;
             do {
 
                 String[] fileData = entry.getName().split("\\.");
                 String fileType = fileData[fileData.length - 1];
 
+                ByteArrayOutputStream baos = new ByteArrayOutputStream();
+                zis.transferTo(baos);
+                byte[] fileBytes = baos.toByteArray();
+                ByteArrayInputStream bais = new ByteArrayInputStream(fileBytes);
 
-                if (fileType != "csv") {
+                if (!"csv".equals(fileType)) {
                     continue;
                 }
-                try (CSVReader csvReader = new CSVReader(new InputStreamReader(zis))) {
+                hasRequiredFile = true;
+                try (CSVReader csvReader = new CSVReader(new InputStreamReader(bais))) {
 
                     List<String[]> data = csvReader.readAll();
                     assertEquals(3, data.size());
@@ -57,7 +66,7 @@ public class FilesParsingTest {
                     );
                 }
             } while ((entry = zis.getNextEntry()) != null);
-
+            assertTrue(hasRequiredFile);
 
         }
     }
@@ -72,16 +81,25 @@ public class FilesParsingTest {
 
             assertNotNull(entry);
 
+            boolean hasRequiredFile = false;
+
             do {
 
                 String[] fileData = entry.getName().split("\\.");
                 String fileType = fileData[fileData.length - 1];
 
+                ByteArrayOutputStream baos = new ByteArrayOutputStream();
+                zis.transferTo(baos);
+                byte[] fileBytes = baos.toByteArray();
+                ByteArrayInputStream bais = new ByteArrayInputStream(fileBytes);
 
-                if (fileType != "pdf") {
+                if (!"pdf".equals(fileType)) {
                     continue;
                 }
-                try (PDDocument document = PDDocument.load(zis)) {
+
+                hasRequiredFile = true;
+
+                try (PDDocument document = PDDocument.load(bais)) {
 
                     PDFTextStripper pdfStripper = new PDFTextStripper();
                     String text = pdfStripper.getText(document);
@@ -89,6 +107,8 @@ public class FilesParsingTest {
                     assertTrue(text.contains("Извещение о дорожно-транспортном происшествии"));
                 }
             } while ((entry = zis.getNextEntry()) != null);
+            assertTrue(hasRequiredFile);
+
         }
     }
 
@@ -102,16 +122,24 @@ public class FilesParsingTest {
 
             assertNotNull(entry);
 
+            boolean hasRequiredFile = false;
+
             do {
 
                 String[] fileData = entry.getName().split("\\.");
                 String fileType = fileData[fileData.length - 1];
 
+                ByteArrayOutputStream baos = new ByteArrayOutputStream();
+                zis.transferTo(baos);
+                byte[] fileBytes = baos.toByteArray();
+                ByteArrayInputStream bais = new ByteArrayInputStream(fileBytes);
 
-                if (fileType != "xlsx") {
+                if (!"xlsx".equals(fileType)) {
                     continue;
                 }
-                try (Workbook workbook = WorkbookFactory.create(zis)) {
+                hasRequiredFile = true;
+                try (Workbook workbook = create(bais)) {
+
 
                     Sheet sheet = workbook.getSheet("Payments");
                     Row row = sheet.getRow(1);
@@ -122,8 +150,10 @@ public class FilesParsingTest {
                     assertEquals("42301810158742897803", value);
                 }
             } while ((entry = zis.getNextEntry()) != null);
+            assertTrue(hasRequiredFile);
         }
     }
+
 
 
     void jsonFileParsingTest() throws Exception {
